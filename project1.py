@@ -21,6 +21,7 @@ map= [
 
 input_log=[]
 
+
 player = {
     "배고픔": True,
     "현제위치": "연대앞 버스정류장",
@@ -28,9 +29,12 @@ player = {
     "col": 0,
     "잔액": 50000,           
     "HP": 10,             
-    "가방": ["체크카드"]  
+    "가방": ["체크카드"],
+    "임무": [],
+    "수신완료": False,
+    "위생수사완료": False
 }
-
+final_destination ="이윤재관"
 game_settings = {"난이도": None}
 environment = {"현재시각": 11}
 #'----------------------------------------------------------------------------------------------------------------'
@@ -40,14 +44,16 @@ def save_game():
             "HP": player["HP"],
             "잔액": player["잔액"],
             "가방": player["가방"],
-            "배고픔": player["배고픔"]
+            "배고픔": player["배고픔"],
+            "수사완료": player ["수사완료"],
+            "위생수사완료": player["위생수사완료"]
         },
         "주인공_위치": {
             "명칭": player["현제위치"],
             "row": player["row"],
             "col": player["col"]
         },
-        "현재시각": environment["현재시각"],
+        "임무": player["임무"],
         "난이도": game_settings["난이도"],
         "입력기록": input_log 
     }
@@ -79,7 +85,7 @@ def load_game():
     file_path = ""
     if choice.isdigit():
         if choice == '0':
-            file_path = input("파일 경로를 직접 입력하세요: ") #
+            file_path = input("파일 경로를 직접 입력하세요: ") 
         elif 0 < int(choice) <= len(files):
             file_path = files[int(choice)-1]
     else:
@@ -89,28 +95,153 @@ def load_game():
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             
-            player["HP"] = data["주인공_상태"]["HP"]
-            player["잔액"] = data["주인공_상태"]["잔액"]
-            player["가방"] = data["주인공_상태"]["가방"]
-            player["배고픔"] = data["주인공_상태"]["배고픔"]
-            player["현제위치"] = data["주인공_위치"]["명칭"]
-            player["row"] = data["주인공_위치"]["row"]
-            player["col"] = data["주인공_위치"]["col"]
+            s = data["주인공_상태"]
+            player["HP"], player["잔액"] = s["HP"], s["잔액"]
+            player["가방"], player["배고픔"] = s["가방"], s["배고픔"]
+            player["수사완료"] = s.get("수사완료", False)
+            player["위생수사완료"] = s.get("위생수사완료", False)
             
-            environment["현재시각"] = data["현재시각"]
-            game_settings["난이도"] = data["난이도"]
+            w= data['주인공_위치']
+            player["현제위치"], player["row"], player["col"] = w["명칭"], w["row"], w["col"]
+
+            player["임무"] = data.get("임무", [])
+            game_settings["난이도"] = data.get("난이도", "보통")
             
             global input_log
             input_log = data.get("입력기록", [])
 
             print(f"\n'{file_path}' 파일을 성공적으로 불러왔습니다!")
             print("게임을 이어서 진행합니다.\n") 
-            
+
+
     except FileNotFoundError:
-        print(f"에러: '{file_path}' 파일을 찾을 수 없습니다.")
+        print(f" 에러: '{file_path}' 파일을 찾을 수 없습니다. 경로를 다시 확인해주세요.")     
     except Exception as e:
         print(f"에러 발생: {e}")
 
+def show_missions():
+    print(f"\n[현재 임무 목록]")
+    if not player["임무"]:
+        print("수행 중인 임무가 없습니다.")
+    else:
+        for i, mission in enumerate(player["임무"], 1):
+            print(f"{i}. {mission}")
+
+def investigation_interaction():
+    current_loc = player["현제위치"]
+    
+    if "교내 부조리 수사" not in player["임무"]:
+        print(f"[{current_loc}] 조용한 장소입니다. 별다른 특이사항은 없습니다.")
+        return
+
+    if current_loc == "공터1":
+        print(f"\n[현장 발견!] {current_loc}에서 부조리 정황을 포착했습니다!")
+        print("결정적 증거를 확보했습니다. 이제 이윤재관에 보고하세요.")
+        player["수사완료"] = True 
+    else:
+        print(f"[{current_loc}] 여기는 깨끗합니다. 다른 곳을 수사해보세요.")
+
+def eagle_statue_interaction():
+    print(f"\n [독수리상] 앞에 도착했습니다. 신비로운 기운이 느껴집니다.")
+    print("수행 가능한 새로운 임무가 있습니다:")
+    print("1. 교내 부조리 수사")
+    print("2. 이윤재관 보고 임무 받기")
+
+    choice = input("받고 싶은 임무의 번호를 선택하세요: ")
+
+    if choice == '1':
+        mission_name = "교내 부조리 수사"
+        if mission_name not in player["임무"]:
+            player["임무"].append(mission_name)
+            print(f">> '{mission_name}' 임무를 받았습니다!")
+        else:
+            print(">> 이미 수행 중인 임무입니다.")
+            
+    elif choice == '2':
+        mission_name = "이윤재관에 보고하기"
+        if mission_name not in player["임무"]:
+            player["임무"].append(mission_name)
+            print(f"'{mission_name}' 임무를 받았습니다!")
+        else:
+            print("이미 수행 중인 임무입니다.")
+
+def lee_yoon_jae_interaction():
+    print(f"\n [이윤재관]에 도착했습니다.")
+    
+
+    if "이윤재관에 보고하기" in player["임무"]:
+        print("조교: '오셨군요! 독수리상에서 보낸 보고를 확인했습니다.'")
+        print("[임무 완료] 수업을 들을 수 있게 되었습니다!")
+        player["임무"].remove("이윤재관에 보고하기") 
+    else:
+        print("조교: '독수리상에서 임무를 먼저 받고 오세요. 여기서는 그냥 들어올 수 없습니다.'")
+
+
+    if "교내 부조리 수사" in player["임무"]:
+        if player["수사완료"]:
+            print("조교: '수고하셨습니다! 공터1의 부조리 보고를 접수했습니다.'")
+            print("[임무 완료] 정의를 실현했습니다!")
+            player["임무"].remove("교내 부조리 수사") 
+        else:
+            print("조교: '부조리 수사 임무를 받으셨군요. 증거를 찾아서 다시 오세요'")
+    
+    if "교내 위생사건 수사" in player["임무"]:
+        if player["위생수사완료"]:
+            print("조교: '세상에, 상한 우유였다니! 신속한 보고 감사합니다.'")
+            print("[임무 완료] 추가 식중독 피해를 막았습니다!")
+            player["임무"].remove("교내 위생사건 수사")
+        else:
+            print("조교: '식중독 사건이 심각합니다. 어서 원인을 찾아와 주세요.'")
+
+
+    print(f"\n [{final_destination} 511호]에 도착했습니다.") #
+    
+    has_mission = "이윤재관에 보고하기" in player["임무"]
+    
+    if has_mission:
+        if player["수사완료"] and player["위생수사완료"]:
+            print("[MISSION COMPLETE]")
+            print("모든 수사 결과를 성공적으로 보고했습니다.")
+            print("송도에서 신촌으로의 성공적인 입성을 축하합니다!")
+        else:
+            print("조교: '수사 임무를 모두 마친 뒤에 보고하러 오세요.'")
+    else:
+        print("조교: '아직 독수리상에서 받은 공식 임무가 없으시네요.'")
+
+def hygiene_investigation():
+    current_loc = player["현제위치"]
+    
+    if "교내 위생사건 수사" not in player["임무"]:
+        return 
+
+    if current_loc == "스타벅스":
+        print(f"\n[단서 발견!] {current_loc}의 우유 보관 상태가 엉망입니다!")
+        print("상한 우유가 식중독의 원인임을 밝혀냈습니다. 이윤재관에 보고하세요.")
+        player["위생수사완료"] = True 
+    else:
+        print(f"[{current_loc}] 이곳의 위생 상태는 양호합니다. 다른 먹거리 장소를 찾아보세요.")
+
+def trigger_special_event():
+    try:
+        with open("events.json", "r", encoding="utf-8") as f:
+            events = json.load(f)
+        
+        current_loc = player["현제위치"]
+    
+        if current_loc in events:
+            event = events[current_loc]
+            print(f"\n✨ [특별상황 발생!] {event['메시지']}")
+            
+            for key, value in event["효과"].items():
+                player[key] += value
+                print(f">> {key}이(가) {value}만큼 변동되었습니다.")
+                
+    except FileNotFoundError:
+        pass
+
+def gate_interaction():
+    print(f"\n [정문]에 도착했습니다")
+    print("경비원: '독수리상에 가서 임무를 먼저 받고, 나중에 이윤재관으로 보고하러 가세요...'")
 #'----------------------------------------------------------------------------------------------------------------'
 
 def student_center_shop():
@@ -147,6 +278,36 @@ def show_player_status():
     print(f"위치: {player['현제위치']}")
     print(f"-----------------------")
 
+    r,c = player["row"], player["col"]
+
+    neighbors = {
+        "북": (r - 1, c),
+        "남": (r + 1, c),
+        "서": (r, c - 1),
+        "동": (r, c + 1)
+    }
+    
+    print("\n[주변 정보]")
+    for direction, (nr, nc) in neighbors.items():
+        if 0 <= nr < len(map) and 0 <= nc < len(map[0]):
+            target = map[nr][nc]
+            if target:
+                print(f" {direction}: {target}")
+            else:
+                print(f" {direction}: (빈 공간)")
+        else:
+            print(f" {direction}: (막힘)")
+    print(f"-----------------------")
+
+def get_action(command):
+    작업매핑 = {
+        "상태": show_player_status,
+        "가방": check_inventory,
+        "저장": save_game,
+        "불러오기": load_game
+    }
+    작업 = 작업매핑.get(command)
+    return 작업
 #'----------------------------------------------------------------------------------------------------------------'
 
 def use_item(item_name):
@@ -155,6 +316,8 @@ def use_item(item_name):
         player["가방"].remove(item_name)
         print(f"\n {item_name}을(를) 먹었습니다! HP가 25 만큼 회복되었습니다.")
         print(f"현재 HP: {player['HP']}")
+    elif item_name == "체크카드":
+        print("\n 체크카드는 결제 시에 '상호작용'을 통해 자동으로 사용됩니다. ")
     else:
         print(f"\n{item_name}은(는) 먹을 수 있는 것이 아닙니다.")
 
@@ -164,45 +327,42 @@ def check_inventory():
     print(f"\n[가방 안의 물건들]")
     if not player["가방"]:
         print("가방이 비어 있습니다.")
-    else:
-        for i, item in enumerate(player["가방"], 1):
+        return
+
+    for i, item in enumerate(player["가방"], 1):
             print(f"{i}. {item}")
         
-        choice = input("\n사용할 물건의 이름이나 번호를 입력하세요 (취소: 0): ")
-        if choice != '0':
-            print(f"{choice}은(는) 지금 사용할 수 없습니다.")
+    choice = input("\n사용할 물건의 이름이나 번호를 입력하세요 (취소: 0): ")
+    if choice =="0":
+        return
+    selected_item = None
+
+    if choice.isdigit():
+        idx= int(choice) -1
+        if 0 <= idx <= len(player["가방"]):
+            selected_item = player["가방"][idx]
+            
+    elif choice in player["가방"]:
+            selected_item = choice
+
+    if selected_item:
+        use_item(selected_item)
+    else: 
+        print("가방에 그런 물건은 없습니다")
+    
 
 #'----------------------------------------------------------------------------------------------------------------'
-def move():
-    while True:
-        command = input('\n명령어를 입력하세요 (북, 남, 서, 동, 가방, 상태, 저장, 불러오기, 종료): ')
-        input_log.append(command)
 
-        if command == "상태":
-            show_player_status()
-            continue
-        elif command == "가방":
-            check_inventory()
-            continue
-        elif command == "불러오기":
-            load_game()
-            continue
-        elif command == "저장": 
-            save_game()
-            continue
-        elif command == "종료":
-            break
+            
+def process_movement(direction):
 
         r, c = player["row"], player["col"]
         new_row, new_col = r, c
 
-        if command == '북': new_row -= 1
-        elif command == '남': new_row += 1
-        elif command == '서': new_col -= 1
-        elif command == '동': new_col += 1
-        else:
-            print("올바른 명령어를 입력하세요.")
-            continue
+        if direction == '북': new_row -= 1
+        elif direction == '남': new_row += 1
+        elif direction == '서': new_col -= 1
+        elif direction == '동': new_col += 1
 
         if 0 <= new_row < len(map) and 0 <= new_col < len(map[0]):
             target= map[new_row][new_col] 
@@ -213,15 +373,43 @@ def move():
                 player["현제위치"] = target
                 player["HP"] -= 1
                 print(f'{player["현제위치"]}(으)로 이동. (HP -1)')
-
-                if player["현제위치"] == "학생회관":
-                    student_center_shop()
-     
-                if player["HP"] <= 0:
-                    print("\n HP가 0이 되었습니다. 쓰러졌습니다...")
-                    break
         else:
             print('그 방향은 막혔어.')
+
+def move():
+    while True:
+        command = input('\n명령어를 입력하세요 (북, 남, 서, 동, 상호작용, 가방, 상태, 임무, 저장, 불러오기, 종료): ')
+        input_log.append(command)
+
+        match command:
+            case "상태":
+                show_player_status()
+            case "임무":
+                show_missions()
+            case "가방":
+                check_inventory()
+            case "저장":
+                save_game()
+            case "불러오기":
+                load_game()
+            case "상호작용": 
+                curr= player ["현제위치"] 
+                if curr == "정문": gate_interaction()
+                elif curr == "독수리상": eagle_statue_interaction()
+                elif curr == "이윤재관": lee_yoon_jae_interaction()
+                elif curr == "학생회관": student_center_shop()
+            
+                investigation_interaction()
+                hygiene_investigation()
+                trigger_special_event()
+
+            case "북" | "남" | "서" | "동":
+                process_movement(command)
+                if player["HP"] <=0:
+                    print("\nHP가 0이 되엇습니다. 죽었어욧")
+            case "종료":
+                break
+            case _: print("잘못된 명령입니다")
 
 
 #'----------------------------------------------------------------------------------------------------------------'

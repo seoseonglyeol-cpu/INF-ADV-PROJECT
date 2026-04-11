@@ -7,6 +7,9 @@ environment = {
     "time": 11,
 }
 
+'----------------------------------------------------------------------------------------------------------------'
+
+
 map= [
     ["공학관", "백양로1", "백주년기념관"],
     ["공학원", "백양로1", "공터1"],
@@ -45,3 +48,34 @@ def move_action():
             print("그 방향은 막혔어요.")
 
 move_action()
+
+'----------------------------------------------------------------------------------------------------------------'
+
+game_settings = {
+    "난이도": None
+}
+
+def set_difficulty():
+    print("--- 난이도 설정 ---")
+    print("1. 쉬움")
+    print("2. 보통")
+    print("3. 어려움")
+    
+    while True:
+        choice = input("원하는 난이도의 번호를 선택하세요: ")
+        
+        if choice == '1':
+            game_settings["난이도"] = "쉬움"
+            break
+        elif choice == '2':
+            game_settings["난이도"] = "보통"
+            break
+        elif choice == '3':
+            game_settings["난이도"] = "어려움"
+            break
+        else:
+            print("잘못된 입력입니다. 1, 2, 3 중에서 선택해주세요.")
+
+    print(f"\n 현재 난이도: {game_settings['난이도']}")
+
+set_difficulty()

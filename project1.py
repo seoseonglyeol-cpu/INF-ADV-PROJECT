@@ -4,12 +4,10 @@ player = {
     "hunger": True,
 }
 
-environment = {
-    "time": 11,
-}
 '''
 #'----------------------------------------------------------------------------------------------------------------'
-
+import os
+import json
 
 map= [
     [None, None, None, None, "새천년관", "이윤재관"],
@@ -21,6 +19,7 @@ map= [
     ["연대앞 버스정류장", "정문", "스타벅스", "세브란스병원 버스정류장", None, None]
 ]
 
+input_log=[]
 
 player = {
     "배고픔": True,
@@ -33,6 +32,84 @@ player = {
 }
 
 game_settings = {"난이도": None}
+environment = {"현재시각": 11}
+#'----------------------------------------------------------------------------------------------------------------'
+def save_game():
+    save_data = {
+        "주인공_상태": {
+            "HP": player["HP"],
+            "잔액": player["잔액"],
+            "가방": player["가방"],
+            "배고픔": player["배고픔"]
+        },
+        "주인공_위치": {
+            "명칭": player["현제위치"],
+            "row": player["row"],
+            "col": player["col"]
+        },
+        "현재시각": environment["현재시각"],
+        "난이도": game_settings["난이도"],
+        "입력기록": input_log 
+    }
+    
+    with open("savefile.json", "w", encoding="utf-8") as f:
+        json.dump(save_data, f, ensure_ascii=False, indent=4)
+    print("\n게임 상태가 'savefile.json'에 저장되었습니다.")
+    print("게임을 이어서 진행합니다.")
+
+#'----------------------------------------------------------------------------------------------------------------'
+
+def load_game():
+    print("\n[불러오기] 모드")
+    
+
+    files = [f for f in os.listdir('.') if f.endswith('.json')]
+    
+    if files:
+        print("현재 폴더의 저장된 파일들:")
+        for i, f in enumerate(files, 1):
+            print(f"{i}. {f}")
+        print("0. 경로 직접 입력 (상대경로/절대경로)")
+    else:
+        print("현재 폴더에 저장된 파일이 없습니다.")
+        print("0. 경로 직접 입력")
+
+    choice = input("\n선택 (번호 또는 경로): ")
+
+    file_path = ""
+    if choice.isdigit():
+        if choice == '0':
+            file_path = input("파일 경로를 직접 입력하세요: ") #
+        elif 0 < int(choice) <= len(files):
+            file_path = files[int(choice)-1]
+    else:
+        file_path = choice 
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            
+            player["HP"] = data["주인공_상태"]["HP"]
+            player["잔액"] = data["주인공_상태"]["잔액"]
+            player["가방"] = data["주인공_상태"]["가방"]
+            player["배고픔"] = data["주인공_상태"]["배고픔"]
+            player["현제위치"] = data["주인공_위치"]["명칭"]
+            player["row"] = data["주인공_위치"]["row"]
+            player["col"] = data["주인공_위치"]["col"]
+            
+            environment["현재시각"] = data["현재시각"]
+            game_settings["난이도"] = data["난이도"]
+            
+            global input_log
+            input_log = data.get("입력기록", [])
+
+            print(f"\n'{file_path}' 파일을 성공적으로 불러왔습니다!")
+            print("게임을 이어서 진행합니다.\n") 
+            
+    except FileNotFoundError:
+        print(f"에러: '{file_path}' 파일을 찾을 수 없습니다.")
+    except Exception as e:
+        print(f"에러 발생: {e}")
 
 #'----------------------------------------------------------------------------------------------------------------'
 
@@ -42,7 +119,6 @@ def student_center_shop():
     print("1. 두쫀쿠 (5,000원) - HP 25 회복")
     print("2. 카페라떼 (2,500원) - HP 25 회복")
     print("0. 나가기")
-
     choice = input("구매할 물건을 선택하세요: ")
 
     if choice == '1':
@@ -71,7 +147,17 @@ def show_player_status():
     print(f"위치: {player['현제위치']}")
     print(f"-----------------------")
 
-show_player_status()
+#'----------------------------------------------------------------------------------------------------------------'
+
+def use_item(item_name):
+    if item_name in ["두쫀쿠", "카페라떼"]:
+        player["HP"] += 25
+        player["가방"].remove(item_name)
+        print(f"\n {item_name}을(를) 먹었습니다! HP가 25 만큼 회복되었습니다.")
+        print(f"현재 HP: {player['HP']}")
+    else:
+        print(f"\n{item_name}은(는) 먹을 수 있는 것이 아닙니다.")
+
 
 #'----------------------------------------------------------------------------------------------------------------'
 def check_inventory():
@@ -89,7 +175,8 @@ def check_inventory():
 #'----------------------------------------------------------------------------------------------------------------'
 def move():
     while True:
-        command = input('\n명령어를 입력하세요 (북, 남, 서, 동, 가방, 상태, 종료): ')
+        command = input('\n명령어를 입력하세요 (북, 남, 서, 동, 가방, 상태, 저장, 불러오기, 종료): ')
+        input_log.append(command)
 
         if command == "상태":
             show_player_status()
@@ -97,8 +184,15 @@ def move():
         elif command == "가방":
             check_inventory()
             continue
+        elif command == "불러오기":
+            load_game()
+            continue
+        elif command == "저장": 
+            save_game()
+            continue
         elif command == "종료":
             break
+
         r, c = player["row"], player["col"]
         new_row, new_col = r, c
 
@@ -111,26 +205,24 @@ def move():
             continue
 
         if 0 <= new_row < len(map) and 0 <= new_col < len(map[0]):
-            if map[new_row][new_col] == "":
-                print("그곳은 갈 수 없는 빈터야.")
+            target= map[new_row][new_col] 
+            if target is None:
+                print('그 방향은 없어요')
             else:
                 player["row"], player["col"] = new_row, new_col
-                player["현제위치"] = map[new_row][new_col]
+                player["현제위치"] = target
+                player["HP"] -= 1
+                print(f'{player["현제위치"]}(으)로 이동. (HP -1)')
 
                 if player["현제위치"] == "학생회관":
                     student_center_shop()
-    
-                
-                player["HP"] -= 1
-                print(f'>> {player["현제위치"]}(으)로 이동 완료. (HP 1 감소)')
-                
+     
                 if player["HP"] <= 0:
                     print("\n HP가 0이 되었습니다. 쓰러졌습니다...")
                     break
         else:
             print('그 방향은 막혔어.')
 
-move()
 
 #'----------------------------------------------------------------------------------------------------------------'
 
@@ -139,52 +231,15 @@ def set_difficulty():
     print("1. 쉬움")
     print("2. 보통")
     print("3. 어려움")
-    
-    while True:
-        choice = input("원하는 난이도의 번호를 선택하세요: ")
-        
-        if choice == '1':
-            game_settings["난이도"] = "쉬움"
-            break
-        elif choice == '2':
-            game_settings["난이도"] = "보통"
-            break
-        elif choice == '3':
-            game_settings["난이도"] = "어려움"
-            break
-        else:
-            print("잘못된 입력입니다. 1, 2, 3 중에서 선택해주세요.")
-
+    choice = input("원하는 난이도의 번호를 선택하세요: ")
+    diff = {"1":"쉬움", "2":"보통", "3": "어려움"}
+    game_settings["난이도"] = diff.get(choice, "보통")
     print(f"\n 현재 난이도: {game_settings['난이도']}")
 
 
 #'----------------------------------------------------------------------------------------------------------------'
-def use_item(item_name):
-    recovery = 25
-    
-    if item_name in ["두쫀쿠", "카페라떼"]:
-        player["HP"] += recovery
-        player["가방"].remove(item_name)
-        print(f"\n {item_name}을(를) 먹었습니다! HP가 {recovery}만큼 회복되었습니다.")
-        print(f"현재 HP: {player['HP']}")
-    else:
-        print(f"\n{item_name}은(는) 먹을 수 있는 것이 아닙니다.")
 
 #'----------------------------------------------------------------------------------------------------------------'
-
-def check_inventory():
-    print(f"\n[가방 안의 물건들]")
-    if not player["가방"]:
-        print("가방이 비어 있습니다.")
-        return
-
-    for i, item in enumerate(player["가방"], 1):
-        print(f"{i}. {item}")
-    
-    choice = input("\n사용할 물건 번호를 입력하세요 (취소: 0): ")
-    if choice.isdigit() and 0 < int(choice) <= len(player["가방"]):
-        selected_item = player["가방"][int(choice)-1]
-        use_item(selected_item)
 
 
 #'----------------------------------------------------------------------------------------------------------------'

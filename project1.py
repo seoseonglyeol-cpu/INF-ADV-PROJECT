@@ -27,7 +27,7 @@ player = {
     "현제위치": "연대앞 버스정류장",
     "row": 6,
     "col": 0,
-    "잔액": 50000,           
+    "잔액": 10000,           
     "HP": 10,             
     "가방": ["체크카드"],
     "임무": [],
@@ -37,6 +37,12 @@ player = {
 final_destination ="이윤재관"
 game_settings = {"난이도": None}
 environment = {"현재시각": 11}
+
+difficulty_settings={
+    "쉬움":1,
+    "보통":2,
+    "어려움":5
+}
 #'----------------------------------------------------------------------------------------------------------------'
 def save_game():
     save_data = {
@@ -230,7 +236,7 @@ def trigger_special_event():
     
         if current_loc in events:
             event = events[current_loc]
-            print(f"\n✨ [특별상황 발생!] {event['메시지']}")
+            print(f"\n [특별상황 발생!] {event['메시지']}")
             
             for key, value in event["효과"].items():
                 player[key] += value
@@ -308,6 +314,21 @@ def get_action(command):
     }
     작업 = 작업매핑.get(command)
     return 작업
+
+def get_avaiable_actions(location):
+    actions[]
+
+    if location == '학생회관':
+        actions = ["구매", "판매"]
+    elif location == "독수리상":
+        actions == ["임무 수락"]
+    elif location in ["이윤재관", "공터1", "스타벅스"]:
+        actions = ["보고", "수사"]
+    
+    return actions
+
+
+
 #'----------------------------------------------------------------------------------------------------------------'
 
 def use_item(item_name):
@@ -355,26 +376,49 @@ def check_inventory():
 
             
 def process_movement(direction):
+    global input_log
 
-        r, c = player["row"], player["col"]
-        new_row, new_col = r, c
+    r, c = player["row"], player["col"]
+    new_row, new_col = r, c
 
-        if direction == '북': new_row -= 1
-        elif direction == '남': new_row += 1
-        elif direction == '서': new_col -= 1
-        elif direction == '동': new_col += 1
+    if direction == '북': new_row -= 1
+    elif direction == '남': new_row += 1
+    elif direction == '서': new_col -= 1
+    elif direction == '동': new_col += 1
 
-        if 0 <= new_row < len(map) and 0 <= new_col < len(map[0]):
-            target= map[new_row][new_col] 
-            if target is None:
-                print('그 방향은 없어요')
-            else:
-                player["row"], player["col"] = new_row, new_col
-                player["현제위치"] = target
-                player["HP"] -= 1
-                print(f'{player["현제위치"]}(으)로 이동. (HP -1)')
-        else:
-            print('그 방향은 막혔어.')
+    if not (0 <= new_row < len(map) and 0 <= new_col < len(map[0])) or map[new_row][new_col] is None:
+        print('>> "그 방향은 막혔어." (다시 입력해주세요)')
+        return
+
+    target = map[new_row][new_col]
+    player["row"], player["col"] = new_row, new_col
+    player["현제위치"] = target
+
+    damage_map = {"쉬움": 1, "보통": 2, "어려움": 3}
+    loss = damage_map.get(game_settings.get("난이도", "보통"), 1)
+    player["HP"] -= loss
+
+    print(f'\n--- [{target}](으)로 이동 완료 ---')
+    print(f"시스템: HP가 {loss} 감소했습니다. (현재 HP: {player['HP']})")
+
+    if target == "공터1" and "교내 부조리 수사" in player["임무"]:
+        print(">> [단서 발견] 바닥에 누군가 흘린 듯한 장부가 떨어져 있습니다!")
+    elif target == "스타벅스" and "교내 위생사건 수사" in player["임무"]:
+        print(">> [단서 발견] 매장 구석에서 유통기한이 지난 우유 팩을 발견했습니다.")
+
+    print("\n[ 주변 상호작용 가능 목록 ]")
+    possible_actions = []
+    
+    if target == "독수리상": possible_actions.append("임무 받기")
+    elif target == "이윤재관": possible_actions.append("임무 보고")
+    elif target == "학생회관": possible_actions.append("상점 이용")
+    elif target == "정문": possible_actions.append("경비원과 대화")
+    
+    if possible_actions:
+        print(f" 수행 가능: {', '.join(possible_actions)}")
+        print(" (원하실 경우 '상호작용' 명령어를 입력하세요.)")
+    else:
+        print(" 가능한 상호작용이 없습니다.")
 
 def move():
     while True:

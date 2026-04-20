@@ -316,7 +316,8 @@ def get_action(command):
     return 작업
 
 def get_avaiable_actions(location):
-    actions[]
+
+    actions=[]
 
     if location == '학생회관':
         actions = ["구매", "판매"]
